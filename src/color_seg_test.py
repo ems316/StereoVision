@@ -59,9 +59,9 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 	
 	
 	#Blur image and convert to the HSV color space
-	image = cv2.GaussianBlur(image,(11,11),0)  #Apply Gassian Blur to 
+	blurred_image = cv2.GaussianBlur(image,(11,11),0)  #Apply Gassian Blur to 
 	
-	imgHSV = cv2.cvtColor(image,cv2.COLOR_BGR2HSV)
+	imgHSV = cv2.cvtColor(blurred_image,cv2.COLOR_BGR2HSV)
 	
 	
 	#cv2.imshow("HSV", imgHSV)
@@ -121,7 +121,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 				#	#draw largest contour
 				#	#drawContours(cameraFeed, contours, largestIndex, Scalar(0, 255, 255), 2)
 		
-			cv2.circle(image,(largestx,largesty),15,(254,255,255),-1)	
+			cv2.circle(image,(largestx,largesty),10,(57,220,48),-1)	
 			cv2.imshow("Blurred",image)
 			
 		else:
