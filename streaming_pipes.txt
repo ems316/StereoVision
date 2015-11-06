@@ -1,0 +1,7 @@
+
+#Working UDP Stream (~3 sec delay)
+Client(Linux):
+gst-launch-1.0 -v v4l2src device=/dev/video0 ! video/x-raw, format=YUY2 ! videoconvert ! x264enc ! rtph264pay pt=96 config-interval=5 ! udpsink host=10.0.0.20 port=5003
+
+Host(RPi):
+gst-launch-1.0 -e -vvvv udpsrc port=5003 ! application/x-rtp ! rtph264depay ! avdec_h264 ! autovideosink sync=false
