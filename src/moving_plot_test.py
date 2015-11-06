@@ -11,7 +11,7 @@ for num in range(0,100):
 	plt.gca().add_patch(circle)
 	plt.axis([-10,15,-10,10])
 	plt.draw()
-	time.sleep(.2)
+	#time.sleep(.2)
 	plt.cla()
 
 '''
