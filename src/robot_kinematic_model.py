@@ -16,7 +16,7 @@ plt.axes()
 plt.show(block = False)
 
 #Matrix of markers
-Markers = np.array([[0,0],[0,1],[.5,-.1],[.1,.5]])
+Markers = np.array([[-.4,.1],[-.3,-.1],[.5,-.1],[.1,.5]])
 num_of_markers = Markers.shape[0]
 
 #plotting function
@@ -39,7 +39,7 @@ def plot_robot(x,y,theta):
 	#Plot the robot
 	circle = plt.Circle((x, y), radius=0.04, fc='y')
 	plt.gca().add_patch(circle)
-	plt.axis([-.5,1,-.5,1])
+	plt.axis([-1,1,-1,1])
 	plt.draw()
 	plt.cla()
 	return
@@ -63,15 +63,26 @@ def simulate_camera(Ax,Ay,theta):
 	for i in range(0,num_of_markers):
 		if in_triangle(Ax,Ay,Bx,By,Cx,Cy,Markers[i][0],Markers[i][1]):
 			rho = math.sqrt((Markers[i][0]-Ax)*(Markers[i][0]-Ax)+(Markers[i][1]-Ay)*(Markers[i][1]-Ay)) #sqrt(x^2+y^2)
-			alpha = (math.atan((Markers[i][1]-Ax)/(Markers[i][0]-Ay))-theta)%(math.pi/2) #atan(y/x)
+			if(Markers[i][1]-Ay > 0):
+				alpha = math.atan2((Markers[i][1]-Ay),(Markers[i][0]-Ax))-(theta%(math.pi))
+			else:
+				alpha = theta + math.atan2((Markers[i][1]-Ay),(Markers[i][0]-Ax))
+				print 'blar'
 			if(rho < lowest_rho and (Markers[i][0]-Ay)!=0):
 				lowest_rho = rho
 				lowest_alpha = alpha
 
-
-	print lowest_rho
-	print lowest_alpha
-	return
+	'''
+	if (lowest_rho != 10000):
+		print 'distance'
+		print lowest_rho
+		print 'angle'
+		print lowest_alpha
+	else:
+		print 'no marker in sight'
+	'''
+	return lowest_rho,lowest_alpha
+	
 
 #Returns whether or not P is in the triangle defined by A,B,C
 #If all the dets are positive or all neg then the point is inside the triangle
@@ -102,7 +113,7 @@ def triangle_det(x0,y0,x1,y1,x2,y2):
 
 
 #X is our pose matrix x,y,theta
-X =np.array([.0,0,0])
+X =np.array([.0,0,math.pi])
 
 #Init the position and orientation covariance uncertainty
 P = np.array([[.01,0,0],[0,.01,0],[0,0,(math.pi)/2]])
@@ -113,8 +124,9 @@ R = np.array([[.01,0],[0,(math.pi)/180]])
 
 while 1:
 	dt =.2
-	v = .3
+	v = 0
 	omega = math.pi/5
+	#omega = 0
 
 	v_corrected = v
 	omega_corrected = omega
@@ -127,11 +139,39 @@ while 1:
 	
 	plot_robot(X[0],X[1],X[2])
 	
-	#time.sleep(dt)
+	time.sleep(dt)
 
 	#P = A*P*A' + W*Q*W'
 	P = (np.dot(np.dot(A,P),A.transpose())) + (np.dot(np.dot(W,Q),W.transpose()))
 	
-	simulate_camera(X[0],X[1],X[2])
+	rho, alpha = simulate_camera(X[0],X[1],X[2])
+	
+	if (rho != 10000):
+		#print 'distance'
+		#print rho
+		print 'angle'
+		print alpha
+		#print 'theta'
+		#print theta%(2*math.pi)
+	else:
+		print 'no marker in sight'
+		continue
+	
+	#Measurement Update
+	
+	#Calculate H
+	#H = [(x(1)-lidar(1))/sqrt((x(1)-lidar(1))^2+(x(2)-lidar(2))^2), (x(2)-lidar(2))/sqrt((lidar(1)-x(1))^2+(lidar(2)-x(2))^2), 0;
+    #    -x(2)/(x(1)^2+x(2)^2), x(1)/(x(1)^2+x(2)^2), 0];
+	
+	#Calculate V
+    #V = np.array([1,0],[0,1])
+    #Compute Kalman Gain
+    #K = P*H.transpose()*inv(H*P*H.transpose()+V*R*V.transpose())
+    
+    #State Update
+    #odom_angle=math.atan2(x(2),x(1))
+    #angle_difference = math.atan2(math.sin(alpha-odom_angle), math.cos(alpha-odom_angle))
+	
+	#x = x + K*([rho;angle_difference] - [sqrt((x(1)-lidar(1))^2+(x(2)-lidar(2))^2);0]);
 	
 	#print(P)
