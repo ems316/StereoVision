@@ -16,7 +16,7 @@ plt.axes()
 plt.show(block = False)
 
 #Matrix of markers
-Markers = np.array([[0,0],[0,1],[.5,-.1],[.1,.5]])
+Markers = np.array([[-.4,.1],[-.3,-.1],[.5,-.1],[.1,.5]])
 num_of_markers = Markers.shape[0]
 
 #plotting function
@@ -40,7 +40,7 @@ def plot_robot(x,y,theta):
 	#Plot the robot
 	circle = plt.Circle((x, y), radius=0.04, fc='y')
 	plt.gca().add_patch(circle)
-	plt.axis([-.5,1,-.5,1])
+	plt.axis([-1,1,-1,1])
 	plt.draw()
 	plt.cla()
 	return
@@ -66,6 +66,7 @@ def simulate_camera(Ax,Ay,theta):
 		if in_triangle(Ax,Ay,Bx,By,Cx,Cy,Markers[i][0],Markers[i][1]):
 			#Find the distance to the marker using the distance formula
 			rho = math.sqrt((Markers[i][0]-Ax)*(Markers[i][0]-Ax)+(Markers[i][1]-Ay)*(Markers[i][1]-Ay)) #sqrt(x^2+y^2)
+<<<<<<< HEAD
 			#Find the angle to the marker
 			alpha = math.atan2(Markers[i][1]-Ay,Markers[i][0]-Ax)
 			
@@ -92,6 +93,13 @@ def simulate_camera(Ax,Ay,theta):
 			alpha = theta - alpha
 			
 			#If the iterated marker is the closest yet seen, save it	
+=======
+			if(Markers[i][1]-Ay > 0):
+				alpha = math.atan2((Markers[i][1]-Ay),(Markers[i][0]-Ax))-(theta%(math.pi))
+			else:
+				alpha = theta + math.atan2((Markers[i][1]-Ay),(Markers[i][0]-Ax))
+				print 'blar'
+>>>>>>> 4fe30bb4f69430b507b8db58e1c16a896693c934
 			if(rho < lowest_rho and (Markers[i][0]-Ay)!=0):
 				lowest_rho = rho
 				lowest_alpha = alpha
@@ -101,8 +109,22 @@ def simulate_camera(Ax,Ay,theta):
 	#print 'Angle'
 	#print lowest_alpha
 
+<<<<<<< HEAD
 	#TODO: Courupt the returned values with zero mean gaussain noise based on the R? matrix
 	return lowest_rho,lowest_alpha
+=======
+	'''
+	if (lowest_rho != 10000):
+		print 'distance'
+		print lowest_rho
+		print 'angle'
+		print lowest_alpha
+	else:
+		print 'no marker in sight'
+	'''
+	return lowest_rho,lowest_alpha
+	
+>>>>>>> 4fe30bb4f69430b507b8db58e1c16a896693c934
 
 #Returns whether or not P is in the triangle defined by A,B,C
 #If all the dets are positive or all neg then the point is inside the triangle
@@ -133,7 +155,11 @@ def triangle_det(x0,y0,x1,y1,x2,y2):
 
 
 #X is our pose matrix x,y,theta
+<<<<<<< HEAD
 X =np.array([.1,0,0])
+=======
+X =np.array([.0,0,math.pi])
+>>>>>>> 4fe30bb4f69430b507b8db58e1c16a896693c934
 
 #Init the position and orientation covariance uncertainty
 P = np.array([[.01,0,0],[0,.01,0],[0,0,(math.pi)/2]])
@@ -147,7 +173,13 @@ A = np.identity(3)
 while 1:
 	dt =.2
 	v = 0
+<<<<<<< HEAD
 	omega = np.pi/10
+=======
+	omega = math.pi/5
+	#omega = 0
+
+>>>>>>> 4fe30bb4f69430b507b8db58e1c16a896693c934
 	v_corrected = v
 	omega_corrected = omega
 	#Prediction
@@ -165,6 +197,7 @@ while 1:
 	#P = A*P*A' + W*Q*W'
 	P = (np.dot(np.dot(A,P),A.transpose())) + (np.dot(np.dot(W,Q),W.transpose()))
 	
+<<<<<<< HEAD
 	#Get data from camera's - rho is distance and alpha is angle
 	(rho, alpha) = simulate_camera(X[0],X[1],X[2])
 	#Check to see if the data is valid - if the camera data is bad skip the measurement part of the Kalman filter
@@ -215,6 +248,37 @@ while 1:
 	Fir = np.array([[rho],[0]])
 	Sec = np.array([[math.sqrt((X[0]-marker_x)*(X[0]-marker_x)+(X[1]-marker_y)*(X[1]-marker_y))],[0]])
 	X = X + np.dot(K,Fir - Sec)
+=======
+	rho, alpha = simulate_camera(X[0],X[1],X[2])
+	
+	if (rho != 10000):
+		#print 'distance'
+		#print rho
+		print 'angle'
+		print alpha
+		#print 'theta'
+		#print theta%(2*math.pi)
+	else:
+		print 'no marker in sight'
+		continue
+	
+	#Measurement Update
+	
+	#Calculate H
+	#H = [(x(1)-lidar(1))/sqrt((x(1)-lidar(1))^2+(x(2)-lidar(2))^2), (x(2)-lidar(2))/sqrt((lidar(1)-x(1))^2+(lidar(2)-x(2))^2), 0;
+    #    -x(2)/(x(1)^2+x(2)^2), x(1)/(x(1)^2+x(2)^2), 0];
+	
+	#Calculate V
+    #V = np.array([1,0],[0,1])
+    #Compute Kalman Gain
+    #K = P*H.transpose()*inv(H*P*H.transpose()+V*R*V.transpose())
+    
+    #State Update
+    #odom_angle=math.atan2(x(2),x(1))
+    #angle_difference = math.atan2(math.sin(alpha-odom_angle), math.cos(alpha-odom_angle))
+	
+	#x = x + K*([rho;angle_difference] - [sqrt((x(1)-lidar(1))^2+(x(2)-lidar(2))^2);0]);
+>>>>>>> 4fe30bb4f69430b507b8db58e1c16a896693c934
 	
 	#Covariance Update
     #P = (eye(3)-K*H)*P;
