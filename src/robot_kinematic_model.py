@@ -21,12 +21,12 @@ num_of_markers = Markers.shape[0]
 
 #plotting function
 
-def plot_robot(x,y,theta):
+def plot_robot(x,y,theta,real_x,real_y,real_theta):
 	#Plot the camera points
-	Bx = x+(max_range*math.cos(theta+(fov/2)))
-	By = y+(max_range*math.sin(theta+(fov/2)))
-	Cx = x+(max_range*math.cos(theta-(fov/2)))
-	Cy = y+(max_range*math.sin(theta-(fov/2)))
+	Bx = real_x+(max_range*math.cos(real_theta+(fov/2)))
+	By = real_y+(max_range*math.sin(real_theta+(fov/2)))
+	Cx = real_x+(max_range*math.cos(real_theta-(fov/2)))
+	Cy = real_y+(max_range*math.sin(real_theta-(fov/2)))
 	circleB = plt.Circle((Bx, By), radius=0.01, fc='r')
 	circleC = plt.Circle((Cx, Cy), radius=0.01, fc='r')
 	plt.gca().add_patch(circleB)
@@ -37,9 +37,13 @@ def plot_robot(x,y,theta):
 		circle = plt.Circle((Markers[i][0], Markers[i][1]), radius=0.01, fc='b')
 		plt.gca().add_patch(circle)
 	
-	#Plot the robot
-	circle = plt.Circle((x, y), radius=0.04, fc='y')
+	#Plot the actual estimated location
+	circle = plt.Circle((x, y), radius=0.04, fc='g')
 	plt.gca().add_patch(circle)
+	#Plot the actual location
+	circle_real = plt.Circle((real_x, real_y), radius=0.04, fc='y')
+	plt.gca().add_patch(circle_real)
+	
 	plt.axis([-.5,1,-.5,1])
 	plt.draw()
 	plt.cla()
@@ -134,6 +138,7 @@ def triangle_det(x0,y0,x1,y1,x2,y2):
 
 #X is our pose matrix x,y,theta
 X =np.array([.1,0,0])
+X_real = X		#This will track the actual not estimated value of the robot
 
 #Init the position and orientation covariance uncertainty
 P = np.array([[.01,0,0],[0,.01,0],[0,0,(math.pi)/2]])
@@ -146,19 +151,21 @@ A = np.identity(3)
 
 while 1:
 	dt =.2
-	v = 0
+	v = .1
 	omega = np.pi/10
 	v_corrected = v
 	omega_corrected = omega
-	#Prediction
+	
+	#Prediction Update
 	theta = X[2]
-	print A
 	#A = np.array([[1,0,(-v_corrected*np.sin(theta)*dt)],[0,1,(v_corrected*np.cos(theta)*dt)],[0,0,1]])
 	W = np.array([[np.cos(theta)*dt,0],[np.sin(theta)*dt,0],[0,dt]])
 	
 	X =np.add(X, np.array([v_corrected*np.cos(theta)*dt,v_corrected*np.sin(theta)*dt,omega_corrected*dt]))
+	X_real=np.add(X_real, np.array([v*np.cos(theta)*dt,v*np.sin(theta)*dt,omega*dt]))
+	print X
 	
-	plot_robot(X[0],X[1],X[2])
+	plot_robot(X[0],X[1],X[2],X_real[0],X_real[1],X_real[2])
 	
 	time.sleep(dt)
 
@@ -185,12 +192,11 @@ while 1:
 	for i in range(0,num_of_markers):
 		distance_to_marker = math.sqrt(((Markers[i][0]-x_guess)*(Markers[i][0]-x_guess))+((Markers[i][1]-y_guess)*(Markers[i][1]-y_guess)))
 		if distance_to_marker < lowest_dist:
+			#marker_x and marker_y are coordinates of the marker we think we are looking at
 			marker_x = Markers[i][0]
 			marker_y = Markers[i][1]
 			lowest_dist = distance_to_marker
 	
-	print marker_x
-	print marker_y
 	
 	#Measurement Update
 	# X[0] = rho*cos(alpha) - marker_x
@@ -202,7 +208,7 @@ while 1:
     
     #Calculate H
 	H = np.array([[((X[0]-marker_x)/math.sqrt((X[0]-marker_x)*(X[0]-marker_x)+(X[1]-marker_y)*(X[1]-marker_y))),((X[1]-marker_y)/math.sqrt((X[0]-marker_x)*(X[0]-marker_x)+(X[1]-marker_y)*(X[1]-marker_y))),0],[-X[1]/(X[0]*X[0]+X[1]*X[1]),X[0]/(X[0]*X[0]+X[1]*X[1]),0]])
-	 
+	
 	#Calculate V
 	V = np.array([[1,0],[0,1]])
     
@@ -214,10 +220,12 @@ while 1:
 	#Update the state
 	Fir = np.array([[rho],[0]])
 	Sec = np.array([[math.sqrt((X[0]-marker_x)*(X[0]-marker_x)+(X[1]-marker_y)*(X[1]-marker_y))],[0]])
-	X = X + np.dot(K,Fir - Sec)
+
+	X = X + np.dot(K,Fir - Sec).transpose()[0]
 	
 	#Covariance Update
     #P = (eye(3)-K*H)*P;
 	P = np.dot((np.identity(3)-np.dot(K,H)),P)
-    
+ 
 	#print(P)
+	
