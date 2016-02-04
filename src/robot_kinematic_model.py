@@ -53,7 +53,7 @@ def plot_robot(x,y,theta,real_x,real_y,real_theta):
 fov = 1.22 #The cameras fov in rad
 max_range = .7 #Max effective range of camera
 #This function takes in the robots current position and returns the distance and angle to the nearest marker
-def simulate_camera(Ax,Ay,theta):
+def simulate_camera(Ax,Ay,theta,):
 	#Get the boundary points of the camera so as to define a triangluar field of view for the robot
 	Bx = Ax+(max_range*math.cos(theta+(fov/2)))
 	By = Ay+(max_range*math.sin(theta+(fov/2)))
@@ -64,7 +64,8 @@ def simulate_camera(Ax,Ay,theta):
 	lowest_rho = 10000
 	lowest_alpha = 0
 	rho = 1000000
-	
+	markerx = 0
+	markery=0	
 	#Iterate through all the markers within the field of view and return the distance and angle to the closest one
 	for i in range(0,num_of_markers):
 		if in_triangle(Ax,Ay,Bx,By,Cx,Cy,Markers[i][0],Markers[i][1]):
@@ -95,10 +96,12 @@ def simulate_camera(Ax,Ay,theta):
 			#Finally subtract the angle to the robots angle from the angle to the marker to come up with the relative angle
 			alpha = theta - alpha
 			
-			#If the iterated marker is the closest yet seen, save it	
+			#If the iterated marker is the closest yet seen, save it
 			if(rho < lowest_rho and (Markers[i][0]-Ay)!=0):
 				lowest_rho = rho
 				lowest_alpha = alpha
+				markerx = Markers[i][0]
+				markery = Markers[i][1]
 				
 	#print 'Distance'
 	#print lowest_rho
@@ -106,8 +109,36 @@ def simulate_camera(Ax,Ay,theta):
 	#print lowest_alpha
 
 	#TODO: Courupt the returned values with zero mean gaussain noise based on the R? matrix
-	return lowest_rho,lowest_alpha
+	return lowest_rho,lowest_alpha,markerx,markery
 
+def angle_to_marker(x,y,theta,marker_x,marker_y):
+	#Find the angle to the marker
+	alpha = math.atan2(marker_y-y,marker_x-x)
+			
+	#Convert the angle to the marker to an angle between 0 and 2pi rads
+	if(alpha < 0):
+		alpha = (2*math.pi)+alpha
+				
+	#Convert the robots current angle to an angle between 0 and 2pi rads
+	if (theta >= 2*math.pi):
+		theta = theta%(2*math.pi)
+	elif (theta < 0):
+		while (theta < -2*math.pi):
+			theta = theta + 2*math.pi
+		theta = 2*math.pi + theta
+				
+	#We need to increase the angle of the marker if the robot is near 2pi rads(think if the robot is looking at 350degs and the marker is at 0degs, the marker should be interpreted at 360degs)
+	if(theta+(fov/2) >= alpha+(2*math.pi)):
+		alpha = alpha + 2*math.pi
+	#We need to decrease the angle of the marker if the robot has a small degree near 0
+	elif(theta-(fov/2) <= alpha-(2*math.pi)):
+		alpha = alpha - 2*math.pi
+				
+	#Finally subtract the angle to the robots angle from the angle to the marker to come up with the relative angle
+	alpha = theta - alpha
+	return alpha
+	
+	
 #Returns whether or not P is in the triangle defined by A,B,C
 #If all the dets are positive or all neg then the point is inside the triangle
 def in_triangle(Ax,Ay,Bx,By,Cx,Cy,Px,Py):
@@ -144,8 +175,8 @@ X_real = X		#This will track the actual not estimated value of the robot
 P = np.array([[.01,0,0],[0,.01,0],[0,0,(math.pi)/2]])
 
 #I think these are the error models for the camera and odometry
-Q = np.array([[.015,0],[0,(math.pi)/150]])
-R = np.array([[.01,0],[0,(math.pi)/180]])
+Q = np.array([[.05,0],[0,(math.pi)/150]])
+R = np.array([[.1,0],[0,(math.pi)/200]])
 
 A = np.identity(3)
 
@@ -153,17 +184,17 @@ while 1:
 	dt =.2
 	v = .1
 	omega = np.pi/10
-	v_corrected = v
-	omega_corrected = omega
+	#Corrupt the wheel velocities with zero mean gaussian noise based on the Q matrix
+	v_corrected = v + np.random.normal(0,Q[0][0])
+	omega_corrected = omega + np.random.normal(0,Q[1][1])
 	
 	#Prediction Update
 	theta = X[2]
 	#A = np.array([[1,0,(-v_corrected*np.sin(theta)*dt)],[0,1,(v_corrected*np.cos(theta)*dt)],[0,0,1]])
 	W = np.array([[np.cos(theta)*dt,0],[np.sin(theta)*dt,0],[0,dt]])
 	
-	X =np.add(X, np.array([v_corrected*np.cos(theta)*dt,v_corrected*np.sin(theta)*dt,omega_corrected*dt]))
-	X_real=np.add(X_real, np.array([v*np.cos(theta)*dt,v*np.sin(theta)*dt,omega*dt]))
-	print X
+	X_real = np.add(X_real, np.array([v_corrected*np.cos(theta)*dt,v_corrected*np.sin(theta)*dt,omega_corrected*dt]))
+	X = np.add(X, np.array([v*np.cos(theta)*dt,v*np.sin(theta)*dt,omega*dt]))
 	
 	plot_robot(X[0],X[1],X[2],X_real[0],X_real[1],X_real[2])
 	
@@ -173,7 +204,7 @@ while 1:
 	P = (np.dot(np.dot(A,P),A.transpose())) + (np.dot(np.dot(W,Q),W.transpose()))
 	
 	#Get data from camera's - rho is distance and alpha is angle
-	(rho, alpha) = simulate_camera(X[0],X[1],X[2])
+	(rho, alpha,realmarkx,realmarky) = simulate_camera(X_real[0],X_real[1],X_real[2])
 	#Check to see if the data is valid - if the camera data is bad skip the measurement part of the Kalman filter
 	if(rho > 100):	#TODO: Change this in actual implementation to a reasonable number
 		continue
@@ -197,7 +228,6 @@ while 1:
 			marker_y = Markers[i][1]
 			lowest_dist = distance_to_marker
 	
-	
 	#Measurement Update
 	# X[0] = rho*cos(alpha) - marker_x
 	# X[1] = rho*sin(alpha) - marker_y
@@ -205,7 +235,8 @@ while 1:
 	#%Calculate H
     #H = [(x(1)-lidar(1))/sqrt((x(1)-lidar(1))^2+(x(2)-lidar(2))^2), (x(2)-lidar(2))/sqrt((lidar(1)-x(1))^2+(lidar(2)-x(2))^2), 0;
     #    			-x(2)/(x(1)^2+x(2)^2), x(1)/(x(1)^2+x(2)^2), 0];
-    
+	marker_x = realmarkx
+	marker_y = realmarky
     #Calculate H
 	H = np.array([[((X[0]-marker_x)/math.sqrt((X[0]-marker_x)*(X[0]-marker_x)+(X[1]-marker_y)*(X[1]-marker_y))),((X[1]-marker_y)/math.sqrt((X[0]-marker_x)*(X[0]-marker_x)+(X[1]-marker_y)*(X[1]-marker_y))),0],[-X[1]/(X[0]*X[0]+X[1]*X[1]),X[0]/(X[0]*X[0]+X[1]*X[1]),0]])
 	
@@ -216,12 +247,24 @@ while 1:
     #K = P*H'*((H*P*H'+V*R*V')^-1);
 	inside_par = inv(np.dot(H,np.dot(P,H.transpose())) + np.dot(V,np.dot(R,V.transpose())))
 	K = np.dot(P,np.dot(H.transpose(),inside_par))
-	
-	#Update the state
-	Fir = np.array([[rho],[0]])
-	Sec = np.array([[math.sqrt((X[0]-marker_x)*(X[0]-marker_x)+(X[1]-marker_y)*(X[1]-marker_y))],[0]])
 
+	#Compute what the angle should be to the nearest marker given the robot's current estimated position
+	odom_angle = angle_to_marker(X[0],X[1],X[2],marker_x,marker_y) 
+	angle_difference =odom_angle-alpha
+	print odom_angle
+	print alpha
+	#Update the state
+	angle_difference = 0
+	
+	Fir = np.array([[rho],[angle_difference]])
+	Sec = np.array([[math.sqrt((X[0]-marker_x)*(X[0]-marker_x)+(X[1]-marker_y)*(X[1]-marker_y))],[0]])
+	print 'Before'
+	print X
 	X = X + np.dot(K,Fir - Sec).transpose()[0]
+	print 'After'
+	print X
+	print 'Actual'
+	print X_real
 	
 	#Covariance Update
     #P = (eye(3)-K*H)*P;
