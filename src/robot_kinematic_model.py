@@ -16,7 +16,7 @@ plt.axes()
 plt.show(block = False)
 
 #Matrix of markers
-Markers = np.array([[0,0],[0,1],[.5,-.1],[.1,.5]])
+Markers = np.array([[0,0],[0,.75],[.5,-.1],[.1,.5]])
 num_of_markers = Markers.shape[0]
 
 #plotting function
@@ -109,6 +109,8 @@ def simulate_camera(Ax,Ay,theta,):
 	#print lowest_alpha
 
 	#TODO: Courupt the returned values with zero mean gaussain noise based on the R? matrix
+	lowest_rho = lowest_rho + np.random.normal(0,R[0][0])
+	lowest_alpha = lowest_alpha + np.random.normal(0,R[1][1])
 	return lowest_rho,lowest_alpha,markerx,markery
 
 def angle_to_marker(x,y,theta,marker_x,marker_y):
@@ -176,7 +178,7 @@ P = np.array([[.01,0,0],[0,.01,0],[0,0,(math.pi)/2]])
 
 #I think these are the error models for the camera and odometry
 Q = np.array([[.05,0],[0,(math.pi)/150]])
-R = np.array([[.1,0],[0,(math.pi)/200]])
+R = np.array([[.1,0],[0,(math.pi)/120]])
 
 A = np.identity(3)
 
@@ -206,6 +208,7 @@ while 1:
 	#Get data from camera's - rho is distance and alpha is angle
 	(rho, alpha,realmarkx,realmarky) = simulate_camera(X_real[0],X_real[1],X_real[2])
 	#Check to see if the data is valid - if the camera data is bad skip the measurement part of the Kalman filter
+	
 	if(rho > 100):	#TODO: Change this in actual implementation to a reasonable number
 		continue
 	
@@ -235,10 +238,11 @@ while 1:
 	#%Calculate H
     #H = [(x(1)-lidar(1))/sqrt((x(1)-lidar(1))^2+(x(2)-lidar(2))^2), (x(2)-lidar(2))/sqrt((lidar(1)-x(1))^2+(lidar(2)-x(2))^2), 0;
     #    			-x(2)/(x(1)^2+x(2)^2), x(1)/(x(1)^2+x(2)^2), 0];
-	marker_x = realmarkx
-	marker_y = realmarky
+	#marker_x = realmarkx
+	#marker_y = realmarky
     #Calculate H
-	H = np.array([[((X[0]-marker_x)/math.sqrt((X[0]-marker_x)*(X[0]-marker_x)+(X[1]-marker_y)*(X[1]-marker_y))),((X[1]-marker_y)/math.sqrt((X[0]-marker_x)*(X[0]-marker_x)+(X[1]-marker_y)*(X[1]-marker_y))),0],[-X[1]/(X[0]*X[0]+X[1]*X[1]),X[0]/(X[0]*X[0]+X[1]*X[1]),0]])
+	#H = np.array([[((X[0]-marker_x)/math.sqrt((X[0]-marker_x)*(X[0]-marker_x)+(X[1]-marker_y)*(X[1]-marker_y))),((X[1]-marker_y)/math.sqrt((X[0]-marker_x)*(X[0]-marker_x)+(X[1]-marker_y)*(X[1]-marker_y))),0],[-X[1]/(X[0]*X[0]+X[1]*X[1]),X[0]/(X[0]*X[0]+X[1]*X[1]),0]])
+	H = np.array([[((X[0]-marker_x)/math.sqrt((X[0]-marker_x)*(X[0]-marker_x)+(X[1]-marker_y)*(X[1]-marker_y))),((X[1]-marker_y)/math.sqrt((X[0]-marker_x)*(X[0]-marker_x)+(X[1]-marker_y)*(X[1]-marker_y))),0],[(marker_y-X[1])/((X[0]-marker_x)*(X[0]-marker_x)+(X[1]-marker_y)*(X[1]-marker_y)),(X[0]-marker_x)/((X[0]-marker_x)*(X[0]-marker_x)+(X[1]-marker_y)*(X[1]-marker_y)),1]])
 	
 	#Calculate V
 	V = np.array([[1,0],[0,1]])
@@ -250,7 +254,7 @@ while 1:
 
 	#Compute what the angle should be to the nearest marker given the robot's current estimated position
 	odom_angle = angle_to_marker(X[0],X[1],X[2],marker_x,marker_y) 
-	angle_difference =odom_angle-alpha
+	angle_difference =alpha - odom_angle
 	print odom_angle
 	print alpha
 	#Update the state
@@ -271,4 +275,3 @@ while 1:
 	P = np.dot((np.identity(3)-np.dot(K,H)),P)
  
 	#print(P)
-	
