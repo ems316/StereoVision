@@ -1,0 +1,79 @@
+import numpy as np
+import cv2
+import threading
+import Queue
+from matplotlib import pyplot as plt
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+import time
+
+exitFlag = 0
+
+class VidCaptureThread (threading.Thread):
+    def __init__(self, threadID, name, cap_arg, frame_q):
+        super(VidCaptureThread, self).__init__()
+        self.threadID = threadID
+        self.name = name
+        self.cap_arg = cap_arg
+        self.frame_q = frame_q
+        self.stoprequest = threading.Event()
+    def run(self):
+        if(self.cap_arg == 0):
+            camera = PiCamera()
+            camera.resolution = (720, 720)
+            camera.framerate = 30
+            rawCapture = PiRGBArray(camera, size=(720,720))
+            time.sleep(0.1)
+            for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+                image = frame.array
+                self.frame_q.put(image)
+                rawCapture.truncate(0)
+        else:
+            cap = cv2.VideoCapture(self.cap_arg)
+        #cap.set(cv2.cv.CV_CAP_PROP_FPS, 15)
+            while not self.stoprequest.isSet():
+            # Capture frame-by-frame
+                ret, frame = cap.read()
+            # Our operations on the frame come here
+            #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+            # Display the resulting frame
+            #cv2.imshow(self.name,gray)
+                self.frame_q.put(frame)
+            cap.release()
+        # When everything done, release the capture        
+    def join(self, timeout=None):
+        self.stoprequest.set()
+        super(VidCaptureThread, self).join(timeout)
+
+frame1_q = Queue.Queue()
+frame2_q = Queue.Queue()
+
+#vidcap1= VidCaptureThread(1, "cap1", "v4l2src device=/dev/video0 ! video/x-raw, format=BGR, width=640, height=480, framerate=15/1 ! appsink sync=false", frame1_q)
+#vidcap1 = VidCaptureThread(1, "cap1", 0, frame1_q)
+vidcap1 = VidCaptureThread(1, "cap1", "fdsrc ! video/x-h264 ! h264parse ! omxh264dec ! videoconvert ! appsink sync=false", frame1_q)
+
+vidcap2 = VidCaptureThread(2, "cap2", "udpsrc port=5003 ! application/x-rtp ! rtpjitterbuffer latency=0 ! rtph264depay ! h264parse ! omxh264dec ! videoconvert ! appsink sync =false", frame2_q) 
+#cap = cv2.VideoCapture("udpsrc port=5003 ! application/x-rtp ! rtpjitterbuffer latency=0 ! rtph264depay ! h264parse ! omxh264dec ! videoconvert ! appsink sync=false")
+
+vidcap1.start()
+vidcap2.start()
+
+while(True):
+    cv2.imshow('frame1',frame1_q.get())
+    frame2_q.get()
+
+#cv2.imshow('frame2', frame2_q.get())
+    #cv2.imshow('frame1', frame1_q.get())
+#    stereo = cv2.StereoBM(cv2.STEREO_BM_BASIC_PRESET, ndisparities=16, SADWindowSize=15)
+ #   disparity = stereo.compute(frame1_q.get(), frame2_q.get())
+  #  plt.imshow(disparity, 'gray')
+   # plt.show()
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+
+cv2.destroyAllWindows()
+vidcap1.join()
+vidcap2.join()
+

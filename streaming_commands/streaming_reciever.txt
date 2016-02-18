@@ -1,0 +1,1 @@
+gst-launch-1.0 -e -vvvv udpsrc port=5003 ! application/x-rtp ! rtpjitterbuffer latency=0 ! rtph264depay ! avdec_h264 ! autovideosink sync=false
