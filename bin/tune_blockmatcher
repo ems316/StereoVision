@@ -30,6 +30,14 @@ settings to file.
 from argparse import ArgumentParser
 
 import cv2
+import sys
+import os
+
+sys.path.insert(-1, os.getcwd())
+sys.path.insert(-1, os.path.dirname(os.getcwd()))
+sys.path.append("../stereovision/stereo_cameras")
+sys.path.append("../stereovision/")
+
 
 from stereovision.blockmatchers import StereoBM, StereoSGBM
 from stereovision.calibration import StereoCalibration
@@ -51,6 +59,8 @@ def main():
                         help="File to save last block matcher settings to.",
                         default="")
     args = parser.parse_args()
+    
+    print args.calibration_folder
 
     calibration = StereoCalibration(input_folder=args.calibration_folder)
     input_files = find_files(args.image_folder)

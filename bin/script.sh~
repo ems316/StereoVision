@@ -1,0 +1,2 @@
+#!/bin/bash
+raspivid -t 0 -n -h 480 -w 640 -fps 15 -hf -b 2000000 -o - | python capture_chessboards --rows 6 --columns 25 --square-size 23.04 --calibration-folder ./calibration/ "fdsrc ! video/x-h264, width=640, height=480, framerate=15/1 ! h264parse ! omxh264dec ! videoconvert ! appsink sync=false" "udpsrc port=5003 ! application/x-rtp ! rtpjitterbuffer latency=0 ! rtph264depay ! h264parse ! omxh264dec ! videoconvert ! appsink sync=false" 10 ./outputfolder/

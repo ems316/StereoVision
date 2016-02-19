@@ -107,8 +107,8 @@ class ChessboardFinder(StereoPair):
                 self.show_frames(1)
             for i, frame in enumerate(frames):
                 (found_chessboard[i],
-                 corners) = cv2.findChessboardCorners(frame, (columns, rows),
-                                                  flags=cv2.CALIB_CB_FAST_CHECK)
+                 corners) = cv2.findChessboardCorners(frame, (columns, rows), flags=(cv2.CALIB_CB_FAST_CHECK | cv2.CALIB_CB_ADAPTIVE_THRESH | cv2.CALIB_CB_FILTER_QUADS))
+                print (found_chessboard[i], corners)
         return frames
 
 

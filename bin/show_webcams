@@ -21,6 +21,12 @@ import os
 import time
 
 import cv2
+import sys
+
+sys.path.insert(-1, os.getcwd())
+sys.path.insert(-1, os.path.dirname(os.getcwd()))
+sys.path.append("../stereovision/stereo_cameras")
+sys.path.append("../stereovision/")
 
 from stereovision.stereo_cameras import StereoPair
 
@@ -36,7 +42,7 @@ def main():
     """
     parser = argparse.ArgumentParser(description="Show video from two "
                                      "webcams.\n\nPress 'q' to exit.")
-    parser.add_argument("devices", type=int, nargs=2, help="Device numbers "
+    parser.add_argument("devices", type=str, nargs=2, help="Device numbers "
                         "for the cameras that should be accessed in order "
                         " (left, right).")
     parser.add_argument("--output_folder",

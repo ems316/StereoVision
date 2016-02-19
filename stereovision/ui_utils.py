@@ -96,6 +96,7 @@ def calibrate_folder(args):
                           widgets=[Bar("=", "[", "]"),
                           " ", Percentage()])
     print("Reading input files...")
+    print args.input_files
     progress.start()
     while args.input_files:
         left, right = args.input_files[:2]
