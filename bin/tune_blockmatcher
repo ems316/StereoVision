@@ -60,7 +60,6 @@ def main():
                         default="")
     args = parser.parse_args()
     
-    print args.calibration_folder
 
     calibration = StereoCalibration(input_folder=args.calibration_folder)
     input_files = find_files(args.image_folder)
@@ -68,10 +67,14 @@ def main():
         block_matcher = StereoBM()
     else:
         block_matcher = StereoSGBM()
+        
     image_pair = [cv2.imread(image) for image in input_files[:2]]
     input_files = input_files[2:]
-    rectified_pair = calibration.rectify(image_pair)
-    tuner = BMTuner(block_matcher, calibration, rectified_pair)
+    #cv2.imshow("Left", image_pair[0]);
+    #cv2.imshow("Right", image_pair[1]);
+
+    #rectified_pair = calibration.rectify(image_pair)
+    tuner = BMTuner(block_matcher, calibration, image_pair)
 
     while input_files:
         image_pair = [cv2.imread(image) for image in input_files[:2]]

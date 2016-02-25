@@ -360,6 +360,7 @@ class StereoSGBM(BlockMatcher):
 
     def _replace_bm(self):
         """Replace ``_block_matcher`` with current values."""
+        print "here"
         self._block_matcher = cv2.StereoSGBM(minDisparity=self._min_disparity,
                         numDisparities=self._num_disp,
                         SADWindowSize=self._sad_window_size,

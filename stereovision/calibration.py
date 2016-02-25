@@ -139,6 +139,7 @@ class StereoCalibration(object):
                                         self.undistortion_map[side],
                                         self.rectification_map[side],
                                         cv2.INTER_NEAREST))
+        print "here"
         return new_frames
 
 

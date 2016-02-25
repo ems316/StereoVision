@@ -66,7 +66,6 @@ STEREO_BM_FLAG.add_argument("--use_stereobm", help="Use StereoBM rather than "
 def find_files(folder):
     """Discover stereo photos and return them as a pairwise sorted list."""
     files = [i for i in os.listdir(folder) if i.startswith("left")]
-    files.sort()
     for i in range(len(files)):
         insert_string = "right{}".format(files[i * 2][4:])
         files.insert(i * 2 + 1, insert_string)
@@ -190,6 +189,7 @@ class BMTuner(object):
         255, because OpenCV multiplies it by 255 when displaying. This is
         because the pixels are stored as floating points.
         """
+        print "here"
         disparity = self.block_matcher.get_disparity(self.pair)
         norm_coeff = 255 / disparity.max()
         cv2.imshow(self.window_name, disparity * norm_coeff / 255)
@@ -197,6 +197,7 @@ class BMTuner(object):
 
     def tune_pair(self, pair):
         """Tune a pair of images."""
+        print "update"
         self._save_bm_state()
         self.pair = pair
         self.update_disparity_map()
